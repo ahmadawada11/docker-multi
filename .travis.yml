@@ -1,0 +1,30 @@
+language: generic
+sudo: required
+services:
+    - docker
+before_install:
+    - docker build -t ahmadawada/react-test -f ./client/Dockerfile.dev ./client
+script:
+    - docker run -e CI=true ahmadawada/react-test npm run test
+after_success:
+    - docker build -t ahmadawada/multi-client ./client
+    - docker build -t ahmadawada/multi-nginx ./nginx
+    - docker build -t ahmadawada/multi-server ./server
+    - docker build -t ahmadawada/multi-worker ./worker
+    #login to the docker cli
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+    - docker push ahmadawada/multi-client
+    - docker push ahmadawada/multi-nginx
+    - docker push ahmadawada/multi-server
+    - docker push ahmadawada/multi-worker
+deploy:
+    provider: elasticbeanstalk
+    region: "us-west-2"
+    app: "docker"
+    env: "Docker-env"
+    bucket_name: "put the name of s3 baucket"
+    bucket_path: "docker"
+    on:
+        branch: master
+    access_key_id: $AWS_ACCESS_KEY
+    secret_access_key: $AWS_SECRET_KEY
